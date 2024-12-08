@@ -8,7 +8,7 @@ target = 19999
 cuda_lib = ctypes.CDLL("./twoSum.so")
 
 cuda_lib.twoSum.argtypes = [
-    ctypes.POINTER(ctypes.c_float),  # Input array
+    ctypes.POINTER(ctypes.c_int),  # Input array
     ctypes.POINTER(ctypes.c_int),  # Output array
     ctypes.c_int,                    # Target value
     ctypes.c_int                     # Number of elements in the input array
@@ -25,14 +25,21 @@ def twoSum(nums, target):
         if req in h and h[req]!=i:
             return [i,h[req]]
 
+def twoSumNaive(nums, target):
+   for i, n in enumerate(nums):
+       for j, n2 in enumerate(nums[i+1:]):
+           if n + n2 == target:
+               return [i, j+i+1]
 
-print("python took", timeit.timeit(lambda: twoSum(data, target), number=100))
-data = np.array(data, dtype=np.float32)
+data = np.array(data, dtype=np.int32)
 out = np.empty(2, dtype=np.int32)
 
-data_ptr = data.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+data_ptr = data.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 out_ptr = out.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
-cuda_lib.twoSum(data_ptr, out_ptr, target, len(data))
 
-print(out)
+print("python naive took", timeit.timeit(lambda: twoSumNaive(data, target), number=10))
+print("python took", timeit.timeit(lambda: twoSum(data, target), number=100))
+print("cuda took", timeit.timeit(lambda: cuda_lib.twoSum(data_ptr, out_ptr, target, len(data)), number=100))
+
+print(out, twoSum(data, target), twoSumNaive(data, target))
