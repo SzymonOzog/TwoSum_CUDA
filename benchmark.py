@@ -10,18 +10,25 @@ target = 19999
 data = list(range(1, 100001))
 target = 199999
 
-if "--nocompile" not in sys.argv:
-    print(subprocess.check_output(["nvcc", "-shared", "-Xcompiler", "-fPIC", "-o", "twoSum.so", "kernels.cu"], cwd=os.getcwd()))
-cuda_lib = ctypes.CDLL("./twoSum.so")
+def ctypesCloseLibrary(lib):
+    dlclose_func = ctypes.CDLL(None).dlclose
+    dlclose_func.argtypes = [ctypes.c_void_p]
+    dlclose_func.restype = ctypes.c_int
+    dlclose_func(lib._handle)
 
-cuda_lib.twoSum.argtypes = [
-    ctypes.POINTER(ctypes.c_int), # Input array
-    ctypes.POINTER(ctypes.c_int), # Output array
-    ctypes.c_int, # Target value
-    ctypes.c_int, # Number of elements in the input array
-    ctypes.c_int, # variant to use
-]
-cuda_lib.twoSum.restype = None
+def compile(block_size):
+    if "--nocompile" not in sys.argv:
+        print(subprocess.check_output(["nvcc", "-shared", "-Xcompiler", "-fPIC", "-lineinfo", f"-DBLOCK_DIM={block_size}", "-o", "twoSum.so", "kernels.cu"], cwd=os.getcwd()))
+    cuda_lib = ctypes.cdll.LoadLibrary("./twoSum.so")
+    cuda_lib.twoSum.argtypes = [
+        ctypes.POINTER(ctypes.c_int), # Input array
+        ctypes.POINTER(ctypes.c_int), # Output array
+        ctypes.c_int, # Target value
+        ctypes.c_int, # Number of elements in the input array
+        ctypes.c_int, # variant to use
+    ]
+    cuda_lib.twoSum.restype = None
+    return cuda_lib
 
 
 def twoSum(nums, target):
@@ -47,8 +54,21 @@ out_ptr = out.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
 
 # print("python naive took", timeit.timeit(lambda: twoSumNaive(data, target), number=10))
-print("python took", timeit.timeit(lambda: twoSum(data, target), number=100))
-for variant in range(1, 3):
-    print(f"cuda variant{variant} took", timeit.timeit(lambda: cuda_lib.twoSum(data_ptr, out_ptr, target, len(data), variant), number=100))
+if "--nobench" not in sys.argv:
+    print("python took", timeit.timeit(lambda: twoSum(data, target), number=100))
+
+for variant in range(1, 5):
+    if "--nobench" not in sys.argv:
+        time = float("inf")
+        for block_size in [32, 64, 128, 256, 512, 1024]:
+            cuda_lib = compile(block_size)
+            new_time = timeit.timeit(lambda: cuda_lib.twoSum(data_ptr, out_ptr, target, len(data), variant), number=100)
+            time = min(time, new_time)
+            ctypesCloseLibrary(cuda_lib)
+            print(block_size, new_time)
+        print(f"cuda variant{variant} took", time)
+    else:
+        cuda_lib = compile(512)
+        cuda_lib.twoSum(data_ptr, out_ptr, target, len(data), variant)
     print(out)
     assert (out == np.array(twoSum(data, target), dtype=np.int32)).all()
