@@ -8,10 +8,11 @@ target = 19999
 cuda_lib = ctypes.CDLL("./twoSum.so")
 
 cuda_lib.twoSum.argtypes = [
-    ctypes.POINTER(ctypes.c_int),  # Input array
-    ctypes.POINTER(ctypes.c_int),  # Output array
-    ctypes.c_int,                    # Target value
-    ctypes.c_int                     # Number of elements in the input array
+    ctypes.POINTER(ctypes.c_int), # Input array
+    ctypes.POINTER(ctypes.c_int), # Output array
+    ctypes.c_int, # Target value
+    ctypes.c_int, # Number of elements in the input array
+    ctypes.c_int, # variant to use
 ]
 cuda_lib.twoSum.restype = None
 
@@ -38,8 +39,10 @@ data_ptr = data.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 out_ptr = out.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
 
-print("python naive took", timeit.timeit(lambda: twoSumNaive(data, target), number=10))
+# print("python naive took", timeit.timeit(lambda: twoSumNaive(data, target), number=10))
 print("python took", timeit.timeit(lambda: twoSum(data, target), number=100))
-print("cuda took", timeit.timeit(lambda: cuda_lib.twoSum(data_ptr, out_ptr, target, len(data)), number=100))
+for variant in range(1, 3):
+    print(f"cuda variant{variant} took", timeit.timeit(lambda: cuda_lib.twoSum(data_ptr, out_ptr, target, len(data), variant), number=100))
+    assert (out == np.array(twoSum(data, target), dtype=np.int32)).all()
 
 print(out, twoSum(data, target), twoSumNaive(data, target))

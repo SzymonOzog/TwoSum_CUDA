@@ -28,7 +28,31 @@ __global__ void twoSumKernel(int* data, int data_num, int target, int* out)
     }
 }
 
-extern "C" void twoSum(int* data, int* out, int target, int data_num)
+__global__ void twoSumKernel2(int* data, int data_num, int target, int* out)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    constexpr unsigned int warp_size = 32;
+    constexpr unsigned int mask = 0xFFFFFFFF;
+    if (idx < data_num)
+    {
+        int current = data[idx];
+        for (int i = idx + 1; i < data_num + warp_size; i+=warp_size)
+        {
+            int current_data = i < data_num ? data[i] : 0;
+            for (int j = 0; j<warp_size; j++)
+            {
+                int test = __shfl_sync(mask, current_data, j, warp_size);
+                if (current + test == target)
+                {
+                    out[0] = idx;
+                    out[1] = i;
+                }
+            }
+        }
+    }
+}
+
+extern "C" void twoSum(int* data, int* out, int target, int data_num, int variant)
 {
     int* data_d;
     int* out_d;
@@ -40,7 +64,13 @@ extern "C" void twoSum(int* data, int* out, int target, int data_num)
     dim3 block_size(1024, 1, 1);
     dim3 grid_size(ceil((float)data_num/block_size.x), 1, 1);
 
-    twoSumKernel<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+    switch (variant)
+    {
+        case 1:
+            twoSumKernel<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+        case 2:
+            twoSumKernel2<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+    }
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaMemcpy(out, out_d, 2*sizeof(int), cudaMemcpyDeviceToHost));
