@@ -101,10 +101,13 @@ extern "C" void twoSum(int* data, int* out, int target, int data_num, int varian
     {
         case 1:
             twoSumKernel<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+            break;
         case 2:
             twoSumKernel2<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+            break;
         case 3:
             twoSumKernel3<<<grid_size, block_size>>>(data_d, data_num, target, out_d);
+            break;
     }
 
     gpuErrchk(cudaPeekAtLastError());
