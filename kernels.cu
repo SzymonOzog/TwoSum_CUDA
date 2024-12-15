@@ -36,19 +36,20 @@ __global__ void twoSumKernel(int* data, int data_num, int target, int* out)
 __global__ void twoSumKernel2(int* data, int data_num, int target, int* out)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    constexpr unsigned int warp_size = 32;
-    constexpr unsigned int mask = 0xFFFFFFFF;
+    __shared__ int data_shared[BLOCK_DIM];
+
     if (idx < data_num)
     {
         int current = data[idx];
-        for (int i = idx + 1; i < data_num + warp_size; i+=warp_size)
+        for (int i = idx + 1; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
         {
             int current_data = i < data_num ? data[i] : 0;
-            for (int j = 0; j<warp_size; j++)
+            data_shared[threadIdx.x] = current_data;
+            for (int j = 0; j<BLOCK_DIM; j+=1)
             {
-                int test = __shfl_sync(mask, current_data, j, warp_size);
-                int test_idx = __shfl_sync(mask, i, j, warp_size);
-                if (current + test == target && idx < test_idx)
+                current_data=data_shared[j];
+                int test_idx = i - i%BLOCK_DIM + j + 1;
+                if (current + current_data == target && idx < test_idx)
                 {
                     out[0] = idx;
                     out[1] = test_idx;
