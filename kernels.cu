@@ -75,11 +75,11 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
             data_shared[threadIdx.x] = current_data;
             for (int j = 0; j<BLOCK_DIM; j+=warp_size)
             {
-                current_data=data_shared[(j+threadIdx.x)%BLOCK_DIM];
+                current_data=data_shared[j+(threadIdx.x%warp_size)];
                 for (int k = 0; k<warp_size; k++)
                 {
                     int test = __shfl_sync(mask, current_data, k, warp_size);
-                    int test_idx = __shfl_sync(mask, i, k, warp_size);
+                    int test_idx = i - i%BLOCK_DIM + j+(threadIdx.x%warp_size) + 1;
                     if (current + test == target && idx < test_idx)
                     {
                         out[0] = idx;
