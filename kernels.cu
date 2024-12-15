@@ -78,10 +78,11 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
                 for (int k = 0; k<warp_size; k++)
                 {
                     int test = __shfl_sync(mask, current_data, k, warp_size);
-                    if (current + test == target)
+                    int test_idx = __shfl_sync(mask, i, k, warp_size);
+                    if (current + test == target && idx < test_idx)
                     {
                         out[0] = idx;
-                        out[1] = i;
+                        out[1] = test_idx;
                     }
                 }
             }
