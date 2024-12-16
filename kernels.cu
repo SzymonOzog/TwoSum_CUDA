@@ -79,7 +79,7 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
                 for (int k = 0; k<warp_size; k++)
                 {
                     int test = __shfl_sync(mask, current_data, k, warp_size);
-                    int test_idx = i - i%BLOCK_DIM + j+(threadIdx.x%warp_size) + 1;
+                    int test_idx = i - i%BLOCK_DIM + j + k + 1;
                     if (current + test == target && idx < test_idx)
                     {
                         out[0] = idx;
