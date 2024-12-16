@@ -45,6 +45,7 @@ __global__ void twoSumKernel2(int* data, int data_num, int target, int* out)
         {
             int current_data = i < data_num ? data[i] : 0;
             data_shared[threadIdx.x] = current_data;
+            __syncthreads();
             for (int j = 0; j<BLOCK_DIM; j+=1)
             {
                 current_data=data_shared[j];
@@ -73,6 +74,7 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
         {
             int current_data = i < data_num ? data[i] : 0;
             data_shared[threadIdx.x] = current_data;
+            __syncthreads();
             for (int j = 0; j<BLOCK_DIM; j+=warp_size)
             {
                 current_data=data_shared[j+(threadIdx.x%warp_size)];
