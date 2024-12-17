@@ -37,19 +37,23 @@ __global__ void twoSumKernel2(int* data, int data_num, int target, int* out)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     __shared__ int data_shared[BLOCK_DIM];
+    int current = 0;
 
     if (idx < data_num)
     {
-        int current = data[idx];
-        for (int i = idx + 1; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
+        for (int i = idx; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
         {
             int current_data = i < data_num ? data[i] : 0;
+            if (idx == i)
+            {
+                current = current_data;
+            }
             data_shared[threadIdx.x] = current_data;
             __syncthreads();
             for (int j = 0; j<BLOCK_DIM; j+=1)
             {
                 current_data=data_shared[j];
-                int test_idx = i - i%BLOCK_DIM + j + 1;
+                int test_idx = i - i%BLOCK_DIM + j;
                 if (current + current_data == target && idx < test_idx)
                 {
                     out[0] = idx;
@@ -66,13 +70,17 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
     constexpr unsigned int warp_size = 32;
     constexpr unsigned int mask = 0xFFFFFFFF;
     __shared__ int data_shared[BLOCK_DIM];
+    int current = 0;
 
     if (idx < data_num)
     {
-        int current = data[idx];
-        for (int i = idx + 1; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
+        for (int i = idx; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
         {
             int current_data = i < data_num ? data[i] : 0;
+            if (idx == i)
+            {
+                current = current_data;
+            }
             data_shared[threadIdx.x] = current_data;
             __syncthreads();
             for (int j = 0; j<BLOCK_DIM; j+=warp_size)
@@ -81,7 +89,7 @@ __global__ void twoSumKernel3(int* data, int data_num, int target, int* out)
                 for (int k = 0; k<warp_size; k++)
                 {
                     int test = __shfl_sync(mask, current_data, k, warp_size);
-                    int test_idx = i - i%BLOCK_DIM + j + k + 1;
+                    int test_idx = i - i%BLOCK_DIM + j + k;
                     if (current + test == target && idx < test_idx)
                     {
                         out[0] = idx;
@@ -100,14 +108,18 @@ __global__ void twoSumKernel4(int* data, int data_num, int target, int* out)
     constexpr unsigned int warp_size = 32;
     constexpr unsigned int mask = 0xFFFFFFFF;
     __shared__ int data_shared[BLOCK_DIM];
+    int current = 0;
+    int current2 = 0;
 
-    if (idx < data_num / 2)
+    if (idx < data_num/2)
     {
-        int current = data[idx];
-        int current2 = 0;
-        for (int i = idx + 1; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
+        for (int i = idx; i < data_num + BLOCK_DIM; i+=BLOCK_DIM)
         {
             int current_data = i < data_num ? data[i] : 0;
+            if (idx == i)
+            {
+                current = current_data;
+            }
             data_shared[threadIdx.x] = current_data;
             __syncthreads();
             for (int j = 0; j<BLOCK_DIM; j+=warp_size)
@@ -116,7 +128,7 @@ __global__ void twoSumKernel4(int* data, int data_num, int target, int* out)
                 for (int k = 0; k<warp_size; k++)
                 {
                     int test = __shfl_sync(mask, current_data, k, warp_size);
-                    int test_idx = i - i%BLOCK_DIM + j + k + 1;
+                    int test_idx = i - i%BLOCK_DIM + j + k;
                     if (test_idx == idx2)
                     {
                         current2 = test;
@@ -132,7 +144,8 @@ __global__ void twoSumKernel4(int* data, int data_num, int target, int* out)
                         out[1] = test_idx;
                     }
                 }
-            } }
+            } 
+        }
     }
 
 }
